@@ -2,6 +2,8 @@
 
 module           = "beamerboost"
 
+-------------------CONFIGURATION----------------------
+
 -- Specify the main document.
 mainfilename     = "beamer.tex"
 
@@ -19,7 +21,9 @@ draft            = false
 -- parallel or not
 parallel         = true
 -- Second pass or not
-secondpass       = false
+secondpass       = true
+
+------------------------------------------------------
 
 typesetexe       = "pdflatex"
 etypesetexe      = "etex"
@@ -42,6 +46,7 @@ cleanfiles       = {
     expandedfilename .. ".tex",
     headerfilename .. ".tex",
     headerfilename .. ".fmt",
+    headerfilename .. ".pdf",
     framefileprefix .. "*.tex",
     framefileprefix .. "*.pdf",
     mergefilename .. ".tex",
@@ -328,6 +333,9 @@ end
 
 -- Main function
 function typeset_demo_tasks()
+
+    local starttime = os.time()
+
     if not direxists(cachedir) then
         mkdir(cachedir)
     end
@@ -361,6 +369,8 @@ function typeset_demo_tasks()
         return errorlevel
     end
 
+    local framerenderedtime = os.time()
+
     errorlevel = mergeFrames()
     if errorlevel ~= 0 then
         return errorlevel
@@ -385,6 +395,11 @@ function typeset_demo_tasks()
     for _, suffix in ipairs(cleansuffixs) do
         rm(cachedir, "*" .. suffix)
     end
+
+    local finishedtime = os.time()
+
+    print("Frame rendering finished at (s): " .. framerenderedtime - starttime)
+    print("Merge finished at (s): " .. finishedtime - starttime)
 
     return 0
 end
