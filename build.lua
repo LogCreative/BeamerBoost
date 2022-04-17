@@ -41,6 +41,11 @@ mergefilename    = "merge"
 framenumber      = -1
 totalframenumber = 0
 
+
+iscjk            = false
+cjkstart         = ""
+cjkend           = ""
+
 -- l3build clean files
 cleanfiles       = {
     expandedfilename .. ".tex",
@@ -92,7 +97,10 @@ function expandFile(file)
 
         function appendLine(line)
             if inpreamble then
-                if line:find("\\begin{document}") then
+                if line:find("\\usepackage{CJK") then
+                    iscjk = true
+                    expandedfile:write(line .. "\n")
+                elseif line:find("\\begin{document}") then
                     inpreamble = false
                     expandedfile:write(line .. "\n")
                 elseif isatbeginpart then
@@ -135,7 +143,11 @@ function expandFile(file)
                     expandedfile:write(line .. "\n")
                 end
             else
-                if line:find("\\maketitle") ~= nil then
+                if iscjk and line:find("\\begin{CJK") then
+                    cjkstart = line
+                elseif iscjk and line:find("\\end{CJK") then
+                    cjkend = line
+                elseif line:find("\\maketitle") ~= nil then
                     expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
                 elseif line:find("\\part") then
                     expandedfile:write(line .. "\n")
@@ -195,6 +207,9 @@ function splitFile(file)
             framefile = io.open(cachedir .. "/" .. framefileprefix .. "." .. framenumber .. ".tex", "w")
             framefile:write("%&" .. headerfilename .. "\n")
             framefile:write("\\begin{document}\n")
+            if iscjk then
+                framefile:write(cjkstart .. "\n")
+            end
             framefile:write(framepreamble)
             framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
             framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}\n")
@@ -203,6 +218,9 @@ function splitFile(file)
         elseif inpreamble == false and line:find("\\end{frame}") ~= nil then
             inframe = false
             framefile:write(line .. "\n")
+            if iscjk then
+                framefile:write(cjkend .. "\n")
+            end
             framefile:write("\\end{document}\n")
             framefile:close()
         elseif inpreamble and line:find("\\begin{document}") ~= nil then
