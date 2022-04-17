@@ -47,7 +47,7 @@ function splitFile(file)
     -- The program is limited to the source code with proper line spliting.
     local inpreamble = true
     local inframe = false
-    local headerfile = io.open(cachedir .. "/" .. headerfilename .. ".tex", "w")
+    local headerfile = io.open(cachedir .. "/" .. headerfilename .. ".new.tex", "w")
     headerfile:write("\\RequirePackage[OT1]{fontenc}\n")       -- for beamer caching
     if draft then
         headerfile:write("\\PassOptionsToClass{draft}{beamer}\n")  -- for quick beamer previewing.
@@ -86,11 +86,33 @@ function splitFile(file)
     end
 end
 
+function compareFile(dir, old, new)
+    -- Compare the old and new files.
+    -- If the old file doesn't exist,
+    -- then rename and return for recompiling.
+    -- If they are same remove the new one,
+    -- Otherwise, rename the new one to old name.
+
+    if fileexists(dir .. "/" .. old) == false then
+        ren(dir, new, old)
+        return 1
+    end
+
+    local errorlevel = os.execute("cd " .. dir .. " && " .. os_diffexe .. " " .. normalize_path(old .. " " .. new))
+    if errorlevel == 0 then
+        rm(dir, new)
+    else
+        rm(dir, old)
+        ren(dir, new, old)
+    end
+    return errorlevel
+end
+
 function precompile(file)
     local etypesetcommand = etypesetexe .. "  -ini -interaction=nonstopmode -jobname=" .. headerfilename .. " \"&" .. typesetexe .. "\" mylatexformat.ltx "
 
     -- Check if header is dirty.
-    local errorlevel = 1
+    local errorlevel = compareFile(cachedir, headerfilename .. ".tex", headerfilename .. ".new.tex")
 
     if errorlevel ~= 0 then
         -- If dirty, recompile.
@@ -106,13 +128,9 @@ end
 function dirtyFrames()
     local dirty = {}
     for i=0,framenumber do
-        table.insert(dirty, i)
-        rm(cachedir, framefileprefix .. i .. ".tex")
-        ren(
-            cachedir,
-            framefileprefix .. "." .. i .. ".tex",
-            framefileprefix .. i .. ".tex"
-        )   -- rename for solidation.
+        if compareFile(cachedir, framefileprefix .. i .. ".tex", framefileprefix .. "." .. i .. ".tex") ~= 0 then
+            table.insert(dirty, i)
+        end
     end
     return dirty
 end
@@ -140,7 +158,7 @@ function renderFrames(dirty)
         
         psfile:close()
 
-        errorlevel = os.execute("cd " .. cachedir .. " && pwsh -f " .. psfilename .. ".ps1") -- Hand off to powershell.
+        errorlevel = os.execute("cd " .. cachedir .. " && pwsh -f " .. psfilename .. ".ps1")
     end
 
     return 0
@@ -149,7 +167,7 @@ end
 function mergeFrames()
     local mergefile = io.open(cachedir .. "/" .. mergefilename .. ".tex", "w")
     mergefile:write("\\documentclass{article}\n")
-    mergefile:write("\\usepackage{pdfpages}")
+    mergefile:write("\\usepackage{pdfpages}\n")
     mergefile:write("\\includepdfset{fitpaper=true,pages=1-last}\n")
     mergefile:write("\\begin{document}\n")
     for i=0,framenumber do
@@ -190,14 +208,11 @@ function typeset_demo_tasks()
         return errorlevel
     end
 
+    -- Copy file back to the main directory.
+    local pdfname = mainfilename:gsub("%.tex$", ".pdf")
+    cp(mergefilename .. ".pdf", cachedir, maindir)
+    rm(maindir, pdfname)
+    ren(maindir, mergefilename .. ".pdf", pdfname)
+
     return 0
 end
-
--- Split frames.
-
--- Render changed frames.
-
--- Write Script to PowerShell for parallel rendering
--- Or sequencial rendering without.
-
--- Merge PDF for preview.
