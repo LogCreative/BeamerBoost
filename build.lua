@@ -16,9 +16,10 @@ cachedir         = "."
 
 -- draft or not
 draft            = false
-
 -- parallel or not
 parallel         = true
+-- Second pass or not
+secondpass       = false
 
 typesetexe       = "pdflatex"
 etypesetexe      = "etex"
@@ -36,19 +37,22 @@ mergefilename    = "merge"
 framenumber      = -1
 totalframenumber = 0
 
-function parseOption(line)
-    local options = line:match("\\begin{frame}%[([,%s%a]*)%]")
-    if options ~= nil then
-        for option in options:gmatch("[^,%s]+") do
-            print(option)
-        end
-    end
-end
-
 function expandFile(file)
     -- Since usually you cannot define frames directly normally.
     -- Expand the page command and include/input command directly.
     -- maketitle, partpage ...
+
+    local inpreamble = true
+
+    local atbeginpart = ""
+    local isatbeginpart = false
+    local atbeginsection = ""
+    local isatbeginsection = false
+    local atbeginsubsection = ""
+    local isatbeginsubsection = false
+    local atbeginsubsubsection = ""
+    local isatbeginsubsubsection = false
+
     local expandedfile = io.open(cachedir .. "/" .. expandedfilename .. ".tex", "w")
     for line in io.lines(file) do
         local fileinput = line:match("\\input{([^}]*)}")
@@ -67,13 +71,68 @@ function expandFile(file)
         end
 
         function appendLine(line)
-            if line:find("\\begin{frame}") ~= nil then
-                totalframenumber = totalframenumber + 1
-            elseif line:find("\\maketitle") ~= nil then
-                expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
-                return 0
+            if inpreamble then
+                if line:find("\\begin{document}") then
+                    inpreamble = false
+                    expandedfile:write(line .. "\n")
+                elseif isatbeginpart then
+                    if line:gsub("%s","") == "}" then
+                        isatbeginpart = false
+                    else
+                        atbeginpart = atbeginpart .. line .. "\n"
+                    end
+                elseif line:find("\\AtBeginPart") ~= nil then
+                    atbeginpart = ""
+                    isatbeginpart = true
+                elseif isatbeginsection then
+                    if line:gsub("%s","") == "}" then
+                        isatbeginsection = false
+                    else
+                        atbeginsection = atbeginsection .. line .. "\n"
+                    end
+                elseif line:find("\\AtBeginSection") ~= nil then
+                    atbeginsection = ""
+                    isatbeginsection = true
+                elseif isatbeginsubsection then
+                    if line:gsub("%s","") == "}" then
+                        isatbeginsubsection = false
+                    else
+                        atbeginsubsection = atbeginsubsection .. line .. "\n"
+                    end
+                elseif line:find("\\AtBeginSubSection") ~= nil then
+                    atbeginsubsection = ""
+                    isatbeginsubsection = true
+                elseif isatbeginsubsubsection then
+                    if line:gsub("%s","") == "}" then
+                        isatbeginsubsubsection = false
+                    else
+                        atbeginsubsubsection = atbeginsubsubsection .. line .. "\n"
+                    end
+                elseif line:find("\\AtBeginSubSubSection") ~= nil then
+                    atbeginsubsubsection = ""
+                    isatbeginsubsubsection = true
+                else
+                    expandedfile:write(line .. "\n")
+                end
+            else
+                if line:find("\\maketitle") ~= nil then
+                    expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
+                elseif line:find("\\part") then
+                    expandedfile:write(line .. "\n")
+                    expandedfile:write(atbeginpart)
+                elseif line:find("\\section") then
+                    expandedfile:write(line .. "\n")
+                    expandedfile:write(atbeginsection)
+                elseif line:find("\\subsection") then
+                    expandedfile:write(line .. "\n")
+                    expandedfile:write(atbeginsubsection)
+                elseif line:find("\\subsubsection") then
+                    expandedfile:write(line .. "\n")
+                    expandedfile:write(atbeginsubsubsection)
+                else
+                    expandedfile:write(line .. "\n")
+                end
             end
-            expandedfile:write(line .. "\n")
         end
 
         if fileexpandpath == nil then
@@ -87,6 +146,14 @@ function expandFile(file)
         end
     end
     expandedfile:close()
+
+    -- Count the total framenumber.
+    for line in io.lines(cachedir .. "/" .. expandedfilename .. ".tex") do
+        if line:find("\\begin{frame}") ~= nil then
+            totalframenumber = totalframenumber + 1
+        end
+    end
+
 end
 
 function splitFile(file)
@@ -102,24 +169,24 @@ function splitFile(file)
     local framefile = nil
     local framepreamble = "" -- accumulated preamble
     for line in io.lines(file) do
-        if line:find("\\begin{frame}") ~= nil then
+        if inpreamble == false and line:find("\\begin{frame}") ~= nil then
             framenumber  = framenumber + 1
             inframe = true
-            -- parseOption(line)
             framefile = io.open(cachedir .. "/" .. framefileprefix .. "." .. framenumber .. ".tex", "w")
             framefile:write("%&" .. headerfilename .. "\n")
             framefile:write("\\begin{document}\n")
             framefile:write(framepreamble)
             framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
-            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber + 1 ..  "}\n")
+            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}\n")
             framefile:write(line .. "\n")
 
-        elseif line:find("\\end{frame}") ~= nil then
+        elseif inpreamble == false and line:find("\\end{frame}") ~= nil then
             inframe = false
             framefile:write(line .. "\n")
             framefile:write("\\end{document}\n")
             framefile:close()
-        elseif line:find("\\begin{document}") ~= nil then
+        elseif inpreamble and line:find("\\begin{document}") ~= nil then
+            headerfile:write("\\AtBeginPart{}\n\\AtBeginSection{}\n\\AtBeginSubsection{}\n") -- Override the original automatic definitions on sectioning appending.
             headerfile:write("\\begin{document}\n\\end{document}\n")
             headerfile:close()
             inpreamble = false
@@ -205,6 +272,9 @@ function renderFrames(dirty)
 
         psfile:write(table.concat(dirty, ", ") .. " | ForEach-Object -Parallel {\n")
         psfile:write("\t" .. typesetexe .. " " .. framefileprefix .. "$_" .. ".tex" .. " " .. typesetopts .. "\n")
+        if secondpass then
+            psfile:write("\t" .. typesetexe .. " " .. framefileprefix .. "$_" .. ".tex" .. " " .. typesetopts .. "\n")
+        end
         psfile:write("}\n")
         
         psfile:close()
@@ -213,6 +283,9 @@ function renderFrames(dirty)
     else
         for _,v in ipairs(dirty) do
             errorlevel = run(cachedir, typesetexe .. " " .. framefileprefix .. v .. ".tex " .. typesetopts)
+            if secondpass then
+                errorlevel = run(cachedir, typesetexe .. " " .. framefileprefix .. v .. ".tex " .. typesetopts)
+            end
             if errorlevel ~= 0 then
                 print("! render frame " .. v .. " failed")
                 return 1
@@ -254,9 +327,15 @@ function typeset_demo_tasks()
     end
     
     dirty = dirtyFrames()
-    if errorlevel == 0 and #dirty == 0 then
-        print(" Nothing to do.")
-        return 0
+    if #dirty == 0 then
+        if errorlevel == 0 then
+            print(" Nothing to do.")
+            return 0
+        else
+            for i=0, framenumber do
+                dirty.insert(i)  -- All restart since header is changed.
+            end
+        end
     end
 
     errorlevel = renderFrames(dirty)

@@ -1,6 +1,18 @@
 \documentclass{ctexbeamer}
 \usetheme{split}
 \setbeamertemplate{page number in head/foot}[totalframenumber]
+\usepackage[]{zhlipsum}
+
+\AtBeginPart{
+    \begin{frame}[plain]
+        \partpage
+    \end{frame}
+}
+\AtBeginSection{
+    \begin{frame}
+        \sectionpage
+    \end{frame}
+}
 \begin{document}
 
     \title{标题}
@@ -9,19 +21,40 @@
 
     \include{contents/foo}
 
-    \begin{frame}[fragile, allowframebreaks]
+    \section{FOO1}
+
+    \begin{frame}[fragile]
         \frametitle{测试1}
     
         测试内容1
     
     \end{frame}
 
-    \include{contents/bar}
+    \section{FOO2}
 
-    \begin{frame}
+    \begin{frame}[fragile]
         \frametitle{测试2}
     
         测试内容2
     
+    \end{frame}
+    
+    \include{contents/bar}
+
+    \section{BAR1}
+
+    \begin{frame}
+        \frametitle{测试3}
+    
+        测试内容3
+    
+    \end{frame}
+
+    \section{BAR2}
+
+    \begin{frame}
+        \frametitle{测试4}
+
+        测试内容4
     \end{frame}
 \end{document}
