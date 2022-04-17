@@ -27,6 +27,7 @@ mergefilename    = "merge"
 
 -- Count the framenumber
 framenumber      = -1
+totalframenumber = 0
 
 -- draft or not
 draft            = false
@@ -61,12 +62,19 @@ function expandFile(file)
             fileexpandpath = fileinclude
         end
 
-        if fileexpandpath == nil then
+        function appendLine(line)
+            if line:find("\\begin{frame}") ~= nil then
+                totalframenumber = totalframenumber + 1
+            end
             expandedfile:write(line .. "\n")
+        end
+
+        if fileexpandpath == nil then
+            appendLine(line)
         else
             local fileexpand = io.open(fileexpandpath, "r")
             for line in fileexpand:lines() do
-                expandedfile:write(line .. "\n")
+                appendLine(line)
             end
             fileexpand:close()
         end
@@ -95,6 +103,8 @@ function splitFile(file)
             framefile:write("%&" .. headerfilename .. "\n")
             framefile:write("\\begin{document}\n")
             framefile:write(framepreamble)
+            framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
+            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}")
             framefile:write(line .. "\n")
 
         elseif line:find("\\end{frame}") ~= nil then
