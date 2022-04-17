@@ -11,9 +11,12 @@ etypesetexe      = "etex"
 typesetopts      = "-interaction=nonstopmode"
 
 -- cache dir for frames
+-- If you don't depend on a relative path, you could another
+-- cache directory.
 maindir          = "."
 builddir         = maindir .. "/build"
-cachedir         = builddir .. "/cache"
+-- cachedir         = builddir .. "/cache"
+cachedir         = "."
 
 -- filename
 expandedfilename = "expanded"
@@ -251,7 +254,9 @@ function typeset_demo_tasks()
         ".log",
         ".nav",
         ".snm",
-        ".toc"
+        ".toc",
+        ".vrb",
+        ".out"
     }
     for _, suffix in ipairs(cleansuffixs) do
         rm(cachedir, "*" .. suffix)
