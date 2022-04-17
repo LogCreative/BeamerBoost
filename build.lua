@@ -16,6 +16,7 @@ builddir         = maindir .. "/build"
 cachedir         = builddir .. "/cache"
 
 -- filename
+expandedfilename = "expanded"
 headerfilename   = "header"
 framefileprefix  = "frame"
 psfilename       = "render"
@@ -40,6 +41,34 @@ function expandFile(file)
     -- Since usually you cannot define frames directly normally.
     -- Expand the page command and include/input command directly.
     -- maketitle, partpage ...
+    local expandedfile = io.open(cachedir .. "/" .. expandedfilename .. ".tex", "w")
+    for line in io.lines(file) do
+        local fileinput = line:match("\\input{([^}]*)}")
+        local fileinclude = line:match("\\include{([^}]*)}")
+        local fileexpandpath = nil
+        if fileinput ~= nil then
+            if fileinput:find("%.") == nil then
+                fileinput = fileinput .. ".tex"
+            end
+            fileexpandpath = fileinput
+        elseif fileinclude ~= nil then
+            if fileinclude:find("%.") == nil then
+                fileinclude = fileinclude .. ".tex"
+            end
+            fileexpandpath = fileinclude
+        end
+
+        if fileexpandpath == nil then
+            expandedfile:write(line .. "\n")
+        else
+            local fileexpand = io.open(fileexpandpath, "r")
+            for line in fileexpand:lines() do
+                expandedfile:write(line .. "\n")
+            end
+            fileexpand:close()
+        end
+    end
+    expandedfile:close()
 end
 
 function splitFile(file)
@@ -184,11 +213,13 @@ function typeset_demo_tasks()
     if not direxists(cachedir) then
         mkdir(cachedir)
     end
+    
     expandFile(mainfilename)
-    splitFile(mainfilename)
+
+    splitFile(cachedir .. "/" .. expandedfilename .. ".tex")
 
     local errorlevel = precompile(headerfilename)
-    if preelv == 2 then
+    if errorlevel == 2 then
         return 1
     end
     
@@ -213,6 +244,18 @@ function typeset_demo_tasks()
     cp(mergefilename .. ".pdf", cachedir, maindir)
     rm(maindir, pdfname)
     ren(maindir, mergefilename .. ".pdf", pdfname)
+
+    -- Clean up
+    cleansuffixs = {
+        ".aux",
+        ".log",
+        ".nav",
+        ".snm",
+        ".toc"
+    }
+    for _, suffix in ipairs(cleansuffixs) do
+        rm(cachedir, "*" .. suffix)
+    end
 
     return 0
 end
