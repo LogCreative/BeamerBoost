@@ -17,6 +17,9 @@ cachedir         = "."
 -- draft or not
 draft            = false
 
+-- parallel or not
+parallel         = true
+
 typesetexe       = "pdflatex"
 etypesetexe      = "etex"
 
@@ -187,17 +190,16 @@ end
 function renderFrames(dirty)
     -- Write Script to PowerShell for parallel rendering
     -- Or sequencial rendering without.
-    
-    local parallel = true
-
-    -- Check whether pwsh exists.
-    local errorlevel = os.execute("pwsh --version")
-    if errorlevel ~= 0 then
-        print("! PowerShell 7 is not installed or in PATH.")
-        parallel = false
-    end
 
     if parallel then
+
+        -- Check whether pwsh exists.
+        local errorlevel = os.execute("pwsh --version")
+        if errorlevel ~= 0 then
+            print("! PowerShell 7 is not installed or in PATH.")
+            parallel = false
+        end
+
         psfile = io.open(cachedir .. "/" .. psfilename .. ".ps1", "w")
         psfile:write("#!/usr/bin/env pwsh\n")
 
@@ -207,7 +209,15 @@ function renderFrames(dirty)
         
         psfile:close()
 
-        errorlevel = os.execute("cd " .. cachedir .. " && pwsh -f " .. psfilename .. ".ps1")
+        return os.execute("cd " .. cachedir .. " && pwsh -f " .. psfilename .. ".ps1")
+    else
+        for _,v in ipairs(dirty) do
+            errorlevel = run(cachedir, typesetexe .. " " .. framefileprefix .. v .. ".tex " .. typesetopts)
+            if errorlevel ~= 0 then
+                print("! render frame " .. v .. " failed")
+                return 1
+            end
+        end
     end
 
     return 0
@@ -251,6 +261,9 @@ function typeset_demo_tasks()
 
     errorlevel = renderFrames(dirty)
     if errorlevel ~= 0 then
+        -- clean frames and pdfs
+        rm(cachedir, framefileprefix .. "*.tex")
+        rm(cachedir, framefileprefix .. "*.pdf")
         return errorlevel
     end
 
