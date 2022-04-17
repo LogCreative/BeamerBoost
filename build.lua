@@ -5,18 +5,22 @@ module           = "beamerboost"
 -- Specify the main document.
 mainfilename     = "beamer.tex"
 
+-- cache dir for frames
+-- If you don't depend on a relative path, you could another
+-- cache directory.
+
+maindir          = "."
+-- builddir         = maindir .. "/build"
+-- cachedir         = builddir .. "/cache"
+cachedir         = "."
+
+-- draft or not
+draft            = false
+
 typesetexe       = "pdflatex"
 etypesetexe      = "etex"
 
 typesetopts      = "-interaction=nonstopmode"
-
--- cache dir for frames
--- If you don't depend on a relative path, you could another
--- cache directory.
-maindir          = "."
-builddir         = maindir .. "/build"
--- cachedir         = builddir .. "/cache"
-cachedir         = "."
 
 -- filename
 expandedfilename = "expanded"
@@ -28,9 +32,6 @@ mergefilename    = "merge"
 -- Count the framenumber
 framenumber      = -1
 totalframenumber = 0
-
--- draft or not
-draft            = false
 
 function parseOption(line)
     local options = line:match("\\begin{frame}%[([,%s%a]*)%]")
@@ -65,6 +66,9 @@ function expandFile(file)
         function appendLine(line)
             if line:find("\\begin{frame}") ~= nil then
                 totalframenumber = totalframenumber + 1
+            elseif line:find("\\maketitle") ~= nil then
+                expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
+                return 0
             end
             expandedfile:write(line .. "\n")
         end
@@ -104,7 +108,7 @@ function splitFile(file)
             framefile:write("\\begin{document}\n")
             framefile:write(framepreamble)
             framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
-            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}")
+            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber + 1 ..  "}\n")
             framefile:write(line .. "\n")
 
         elseif line:find("\\end{frame}") ~= nil then
@@ -121,8 +125,11 @@ function splitFile(file)
                 headerfile:write(line .. "\n")
             elseif inframe then
                 framefile:write(line .. "\n")
-            elseif line:match("%s*\n") ~= nil then
-                framepreamble = framepreamble .. line .. "\n"
+            else
+                line = line .. "\n"
+                if line ~= "\n" and line:match("%s*\n") ~= nil then
+                    framepreamble = framepreamble .. line
+                end
             end
         end
     end
@@ -227,7 +234,7 @@ function typeset_demo_tasks()
         mkdir(cachedir)
     end
     
-    expandFile(mainfilename)
+    expandFile(maindir .. "/" .. mainfilename)
 
     splitFile(cachedir .. "/" .. expandedfilename .. ".tex")
 
