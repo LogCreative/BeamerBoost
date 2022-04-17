@@ -37,6 +37,21 @@ mergefilename    = "merge"
 framenumber      = -1
 totalframenumber = 0
 
+-- l3build clean files
+cleanfiles       = {
+    expandedfilename .. ".tex",
+    headerfilename .. ".tex",
+    headerfilename .. ".fmt",
+    framefileprefix .. "*.tex",
+    framefileprefix .. "*.pdf",
+    mergefilename .. ".tex",
+    psfilename .. ".ps1",
+    "*.dvi",
+    "*.fdb_latexmk",
+    "*.fls",
+    "*.log"
+}
+
 function expandFile(file)
     -- Since usually you cannot define frames directly normally.
     -- Expand the page command and include/input command directly.
