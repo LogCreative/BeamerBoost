@@ -297,13 +297,15 @@ function renderFrames(dirty)
     -- Or sequencial rendering without.
 
     if parallel then
-
         -- Check whether pwsh exists.
         local errorlevel = os.execute("pwsh --version")
         if errorlevel ~= 0 then
             print("! PowerShell 7 is not installed or in PATH.")
             parallel = false
-        end
+        end 
+    end
+
+    if parallel then
 
         psfile = io.open(cachedir .. "/" .. psfilename .. ".ps1", "w")
         psfile:write("#!/usr/bin/env pwsh\n")
