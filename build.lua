@@ -398,7 +398,9 @@ function typeset_demo_tasks()
 
     -- Copy file back to the main directory.
     local pdfname = mainfilename:gsub("%.tex$", ".pdf")
-    cp(mergefilename .. ".pdf", cachedir, maindir)
+    if cachedir ~= maindir then
+        cp(mergefilename .. ".pdf", cachedir, maindir) 
+    end
     rm(maindir, pdfname)
     ren(maindir, mergefilename .. ".pdf", pdfname)
 
