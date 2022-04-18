@@ -96,6 +96,10 @@ function expandFile(file)
         end
 
         function appendLine(line)
+            if line:sub(1, 1) == "%" then
+                return
+            end
+            line = line:gsub("([^\\])%%.*", "%1")
             if inpreamble then
                 if line:find("\\usepackage{CJK") then
                     iscjk = true

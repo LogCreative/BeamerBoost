@@ -52,7 +52,7 @@ M --> C[Clean Up]
 ## 目前缺陷
 
 - `allowframebreak` 可能会导致页码错误（无法预估）
-- 仅支持 `pdflatex`，因为 `xelatex` 和 `lualatex` 的 OpenType 字体载入无法通过 `mylatexformat` 缓存，但是愿景依然是在预览完毕后，再通过较慢的方式渲染一遍。为了获得全平台中文支持（Linux 或 Mac），你可能需要使用 `CJK` 手动方法。（事实上 `xelatex` 在类 Unix 平台上的速度要比 Windows 上快得多，可以不需要再通过这种并行渲染的方式。）
+- 仅支持 `pdflatex`，因为 `xelatex` 和 `lualatex` 的 OpenType 字体载入无法通过 `mylatexformat` 缓存，但是愿景依然是在预览完毕后，再通过较慢的方式渲染一遍。为了获得全平台中文支持（Linux 或 Mac），你可能需要使用 `CJK` 手动方法。（事实上 `xelatex` 在类 Unix 平台上的速度要比 Windows 上快得多，可以不需要再用这种并行渲染的方式。）
 ```latex
 \documentclass{beamer}
 \usepackage{CJKutf8}
