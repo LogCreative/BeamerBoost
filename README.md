@@ -16,6 +16,23 @@ l3build clean
 ```
 将清理所有的临时文件。
 
+## 概览
+
+```mermaid
+flowchart TD
+E[Expand Input] --> S[Split Frames] --> P[Precompile Header]
+P --> Frame0
+P --> Frame1
+P --> Frame2
+P --> Frame3
+Frame0 --> M[Merge Frames]
+Frame1 --> M
+Frame2 --> M
+Frame3 --> M
+M --> C[Clean Up]
+```
+
+
 ## 测评
 
 在四逻辑核机器上测试。
