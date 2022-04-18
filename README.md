@@ -22,13 +22,11 @@ l3build clean
 flowchart TD
 E[Expand Input] --> S[Split Frames] --> P[Precompile Header] --> D[Decide Dirty Frames]
 D --> Frame0
-D --> Frame1
 D --> Frame3
-D --> Frame5
 Frame0 --> M[Merge Frames]
 Frame1 --> M
+Frame2 --> M
 Frame3 --> M
-Frame5 --> M
 M --> C[Clean Up]
 ```
 
