@@ -1,6 +1,6 @@
 # BeamerBoost
 
-LaTeX `beamer` 文档类的**脏帧渲染**与**并行渲染**的预览级实现。
+LaTeX `beamer` 文档类的**脏帧渲染**与**并行渲染**的预览级实现，借助于 [`l3build`](https://github.com/latex3/l3build) (lua) 和 [PowerShell](https://docs.microsoft.com/powershell/) 实现。
 
 ## 使用方法
 
@@ -9,7 +9,7 @@ l3build doc
 ```
 以及可以使用 VS Code 预先配置的 `Recipe: preview`。
 
-为了使用并行渲染，请安装 PowerShell 7 并添加到路径（`pwsh` 在命令行中可以运行，以及需要允许脚本运行）。
+为了使用并行渲染，请安装 PowerShell 7 并添加到路径（`pwsh` 在命令行中可以运行，以及需要允许脚本运行），否则将回退到非并行渲染。
 
 ```shell
 l3build clean
@@ -66,7 +66,8 @@ M --> C[Clean Up]
 ```
 - 不支持任何跨帧的 `group` （`CJK` 除外）。
 - 需要工整的代码，也就是一行只有一个命令。
-- 太过复杂的代码可能无法解析。
+- 太过复杂的代码可能无法解析，请保证代码能够用正常的编译方式正常通过。
+- 文档类中预置的 `\AtBeginPart`, `\AtBeginSection`, `\AtBeginSubsection`, `\AtBeginSubsubsection` 命令将会被全部清空，请显式地在主文件添加相关命令，并且不区分是否带星号的版本（可选参数无效），这类命令的最后一个大括号必须单独占一行。
 
 ## 相关项目
 
