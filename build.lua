@@ -8,8 +8,8 @@ module           = "beamerboost"
 mainfilename     = "beamer.tex"
 
 -- cache dir for frames
--- If you don't depend on a relative path, you could another
--- cache directory.
+-- If you don't depend on a relative path,
+-- you could change to another cache directory.
 
 maindir          = "."
 -- builddir         = maindir .. "/build"
@@ -41,7 +41,7 @@ mergefilename    = "merge"
 framenumber      = -1
 totalframenumber = 0
 
-
+-- CJK related
 iscjk            = false
 cjkstart         = ""
 cjkend           = ""
@@ -127,7 +127,7 @@ function expandFile(file)
                     else
                         atbeginsubsection = atbeginsubsection .. line .. "\n"
                     end
-                elseif line:find("\\AtBeginSubSection") ~= nil then
+                elseif line:find("\\AtBeginSubsection") ~= nil then
                     atbeginsubsection = ""
                     isatbeginsubsection = true
                 elseif isatbeginsubsubsection then
@@ -136,7 +136,7 @@ function expandFile(file)
                     else
                         atbeginsubsubsection = atbeginsubsubsection .. line .. "\n"
                     end
-                elseif line:find("\\AtBeginSubSubSection") ~= nil then
+                elseif line:find("\\AtBeginSubsubsection") ~= nil then
                     atbeginsubsubsection = ""
                     isatbeginsubsubsection = true
                 else

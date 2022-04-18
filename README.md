@@ -18,7 +18,7 @@ l3build clean
 
 ## 测评
 
-在四核机器上测试。
+在四逻辑核机器上测试。
 
 || BeamerBoost | LaTeXmk | BeamerBoost 修改一帧 | LaTeXmk 修改一帧 |
 |---|---|---|---|---|
@@ -27,7 +27,7 @@ l3build clean
 
 从该表可以看出，使用 BeamerBoost 不能够减少初始化时间（甚至成倍的增长了），但是通过脏区渲染，可以较早地拿到所有帧的数据，虽然最后的合并阶段仍然同样依赖于 I/O 的速度，但对于构建一些实用软件而言，每次渲染预览少了几秒，按照每个文件可能会构建 100 次计算，将会减少 10 分钟的构建时间。
 
-| | BeamerBoost(每帧渲染两次) | BeamerBoost (每帧渲染两次) 修改一帧 |
+| | BeamerBoost (每帧渲染两次) | BeamerBoost (每帧渲染两次) 修改一帧 |
 |---|---|---|
 |帧渲染完成时间(s)| 80 | 10 |
 |全部合成完成时间(s)| 93 | 16 |
@@ -54,3 +54,5 @@ l3build clean
 ## 相关项目
 
 [AutoBeamer](https://github.com/LogCreative/AutoBeamer) 用于转换 Markdown 为 beamer 代码。
+
+[ReportBoost](https://github.com/LogCreative/ReportBoost) 用于准备一个开箱即用的预编译环境。
