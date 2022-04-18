@@ -369,14 +369,14 @@ function typeset_demo_tasks()
         return 1
     end
     
-    dirty = dirtyFrames()
+    local dirty = dirtyFrames()
     if #dirty == 0 then
         if errorlevel == 0 then
             print(" Nothing to do.")
             return 0
         else
             for i=0, framenumber do
-                dirty.insert(i)  -- All restart since header is changed.
+                table.insert(dirty,i)  -- All restart since header is changed.
             end
         end
     end
