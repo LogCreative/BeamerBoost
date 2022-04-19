@@ -16,14 +16,21 @@ maindir          = "."
 -- cachedir         = builddir .. "/cache"
 cachedir         = "."
 
--- draft or not
+-- draft or not               : disable for no numbering
 draft            = false
--- parallel or not
+-- total frame number or not  : disable for less changes
+totalframe       = false
+
+-- parallel or not            : enable with PowerShell 7
 parallel         = true
--- Second pass or not
+-- Second pass or not         : enable for TOC rendering
 secondpass       = true
 
 ------------------------------------------------------
+
+if draft then
+    totalframe   = false
+end
 
 typesetexe       = "pdflatex"
 etypesetexe      = "etex"
@@ -216,7 +223,12 @@ function splitFile(file)
             end
             framefile:write(framepreamble)
             framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
-            framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}\n")
+            if totalframe then
+                framefile:write("\\gdef\\inserttotalframenumber{" .. totalframenumber ..  "}\n")
+            else
+                framefile:write("\\gdef\\inserttotalframenumber{?}\n")
+            end
+            
             framefile:write(line .. "\n")
 
         elseif inpreamble == false and line:find("\\end{frame}") ~= nil then
