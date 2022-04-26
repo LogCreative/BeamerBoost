@@ -39,6 +39,7 @@ typesetopts      = "-interaction=nonstopmode"
 
 -- filename
 expandedfilename = "expanded"
+expandedinputfilename = "expanded.input"
 headerfilename   = "header"
 framefileprefix  = "frame"
 psfilename       = "render"
@@ -69,23 +70,17 @@ cleanfiles       = {
     "*.log"
 }
 
-function expandFile(file)
-    -- Since usually you cannot define frames directly normally.
-    -- Expand the page command and include/input command directly.
-    -- maketitle, partpage ...
+-- To avoid competing on file I/O
+-- close the file before calling the next function
+-- then open it with 'a' mode
+expandedinputfile = nil
 
-    local inpreamble = true
-
-    local atbeginpart = ""
-    local isatbeginpart = false
-    local atbeginsection = ""
-    local isatbeginsection = false
-    local atbeginsubsection = ""
-    local isatbeginsubsection = false
-    local atbeginsubsubsection = ""
-    local isatbeginsubsubsection = false
-
-    local expandedfile = io.open(cachedir .. "/" .. expandedfilename .. ".tex", "w")
+function expandingFile(file)
+    if expandedinputfile == nil then
+        expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "w")
+    else
+        expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "a")
+    end
     for line in io.lines(file) do
         local fileinput = line:match("\\input{([^}]*)}")
         local fileinclude = line:match("\\include{([^}]*)}")
@@ -101,11 +96,41 @@ function expandFile(file)
             end
             fileexpandpath = fileinclude
         end
+        if fileexpandpath == nil then
+            expandedinputfile:write(line .. "\n")
+        else
+            expandedinputfile:close()
+            expandingFile(fileexpandpath)
+            expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "a")
+        end
+    end
+    expandedinputfile:close()
+end
 
-        function appendLine(line)
-            if line:sub(1, 1) == "%" then
-                return
-            end
+function expandFile(file)
+    -- Only process \include, \input
+    -- TODO: \includeonly selection
+    expandingFile(file)
+    expandFrame(cachedir .. '/' .. expandedinputfilename .. ".tex")
+end
+
+function expandFrame(file)
+
+    local inpreamble = true
+
+    local atbeginpart = ""
+    local isatbeginpart = false
+    local atbeginsection = ""
+    local isatbeginsection = false
+    local atbeginsubsection = ""
+    local isatbeginsubsection = false
+    local atbeginsubsubsection = ""
+    local isatbeginsubsubsection = false
+
+    local expandedfile = io.open(cachedir .. "/" .. expandedfilename .. ".tex", "w")
+    for line in io.lines(file) do
+        print(line)
+        if line:sub(1, 1) ~= "%" then
             line = line:gsub("([^\\])%%.*", "%1")
             if inpreamble then
                 if line:find("\\usepackage{CJK") then
@@ -160,16 +185,16 @@ function expandFile(file)
                     cjkend = line
                 elseif line:find("\\maketitle") ~= nil then
                     expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
-                elseif line:find("\\part") then
+                elseif line:find("\\part{") then
                     expandedfile:write(line .. "\n")
                     expandedfile:write(atbeginpart)
-                elseif line:find("\\section") then
+                elseif line:find("\\section{") then
                     expandedfile:write(line .. "\n")
                     expandedfile:write(atbeginsection)
-                elseif line:find("\\subsection") then
+                elseif line:find("\\subsection{") then
                     expandedfile:write(line .. "\n")
                     expandedfile:write(atbeginsubsection)
-                elseif line:find("\\subsubsection") then
+                elseif line:find("\\subsubsection{") then
                     expandedfile:write(line .. "\n")
                     expandedfile:write(atbeginsubsubsection)
                 else
@@ -177,26 +202,17 @@ function expandFile(file)
                 end
             end
         end
-
-        if fileexpandpath == nil then
-            appendLine(line)
-        else
-            local fileexpand = io.open(fileexpandpath, "r")
-            for line in fileexpand:lines() do
-                appendLine(line)
-            end
-            fileexpand:close()
-        end
     end
     expandedfile:close()
 
     -- Count the total framenumber.
+    -- TODO: remember the framepreamble and framepostamble
+    -- for future use
     for line in io.lines(cachedir .. "/" .. expandedfilename .. ".tex") do
         if line:find("\\begin{frame}") ~= nil then
             totalframenumber = totalframenumber + 1
         end
     end
-
 end
 
 function splitFile(file)
