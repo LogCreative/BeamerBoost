@@ -368,6 +368,18 @@ function precompile(file)
     end
 end
 
+function cleanExtraFrames()
+    local extra = framenumber + 1
+    local errorlevel = 0
+    while fileexists(cachedir .. "/" .. framefileprefix .. extra .. ".tex") do
+        rm(cachedir, framefileprefix .. extra .. ".tex")
+        rm(cachedir, framefileprefix .. extra .. ".pdf")
+        extra = extra + 1
+        errorlevel = 1 -- Has less files.
+    end
+    return errorlevel
+end
+
 function dirtyFrames()
     local dirty = {}
     for i=0,framenumber do
@@ -458,40 +470,47 @@ function typeset_demo_tasks()
         return 1
     end
     
+    local lessframelv = cleanExtraFrames()
+
     local dirty = dirtyFrames()
     if #dirty == 0 then
         if errorlevel == 0 then
-            print(" Nothing to do.")
-            return 0
+            print(" No dirty frames.")
+            if lessframelv == 0 then
+                print(" Nothing to do.")
+                return 0
+            end
         else
             for i=0, framenumber do
                 table.insert(dirty,i)  -- All restart since header is changed.
             end
         end
-    end
-
-    errorlevel = renderFrames(dirty)
-    if errorlevel ~= 0 then
-        -- clean frames and pdfs
-        rm(cachedir, framefileprefix .. "*.tex")
-        rm(cachedir, framefileprefix .. "*.pdf")
-        return errorlevel
+    else
+        errorlevel = renderFrames(dirty)
+        if errorlevel ~= 0 then
+            -- clean frames and pdfs
+            rm(cachedir, framefileprefix .. "*.tex")
+            rm(cachedir, framefileprefix .. "*.pdf")
+            return errorlevel
+        end
     end
 
     local framerenderedtime = os.time()
+    
+    if #dirty > 0 or lessframelv ~= 0 then
+         errorlevel = mergeFrames()
+        if errorlevel ~= 0 then
+            return errorlevel
+        end
 
-    errorlevel = mergeFrames()
-    if errorlevel ~= 0 then
-        return errorlevel
+        -- Copy file back to the main directory.
+        local pdfname = mainfilename:gsub("%.tex$", ".pdf")
+        if cachedir ~= maindir then
+            cp(mergefilename .. ".pdf", cachedir, maindir) 
+        end
+        rm(maindir, pdfname)
+        ren(maindir, mergefilename .. ".pdf", pdfname)
     end
-
-    -- Copy file back to the main directory.
-    local pdfname = mainfilename:gsub("%.tex$", ".pdf")
-    if cachedir ~= maindir then
-        cp(mergefilename .. ".pdf", cachedir, maindir) 
-    end
-    rm(maindir, pdfname)
-    ren(maindir, mergefilename .. ".pdf", pdfname)
 
     -- Clean up
     cleansuffixs = {
