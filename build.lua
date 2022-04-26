@@ -70,48 +70,103 @@ cleanfiles       = {
     "*.log"
 }
 
+-- TODO: Consider use native LaTeX beamer machnism for expanding file.
+-- TOOD: Consider tikz externalize like to detect the change.
+
 -- To avoid competing on file I/O
 -- close the file before calling the next function
 -- then open it with 'a' mode
 expandedinputfile = nil
 
-function expandingFile(file)
+function expandingFile(file, inpreamble, includeonly, isincludeonly)
     if expandedinputfile == nil then
         expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "w")
     else
         expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "a")
     end
+
     for line in io.lines(file) do
+        if line:find("\\begin{document}") then
+            inpreamble = false
+        end
+        
+        local newincludeonly = nil
+        if isincludeonly then
+            includeonly = includeonly .. line:gsub("%s", ""):gsub("}.*", "") .. ","
+            if line:find("}") ~= nil then
+                isincludeonly = false
+                line = "" -- manually clear
+            end
+        else
+            newincludeonly = line:match("\\includeonly{([^}]*)")
+            if newincludeonly ~= nil then
+                if includeonly == nil then
+                    includeonly = newincludeonly
+                else
+                    includeonly = includeonly .. newincludeonly
+                end
+                if inpreamble then
+                    if line:find("}") == nil then
+                        isincludeonly = true  -- not closed
+                    else
+                        includeonly = includeonly .. ","
+                    end
+                else
+                    print("! You can only use \\includeonly in preamble")
+                    return 1
+                end
+            end
+        end
+
+        function expandFileInput(file)
+            expandedinputfile:close()
+            expandingFile(file, inpreamble, includeonly, isincludeonly)
+            expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "a")
+        end
+
         local fileinput = line:match("\\input{([^}]*)}")
-        local fileinclude = line:match("\\include{([^}]*)}")
-        local fileexpandpath = nil
         if fileinput ~= nil then
             if fileinput:find("%.") == nil then
                 fileinput = fileinput .. ".tex"
             end
-            fileexpandpath = fileinput
-        elseif fileinclude ~= nil then
-            if fileinclude:find("%.") == nil then
-                fileinclude = fileinclude .. ".tex"
-            end
-            fileexpandpath = fileinclude
+            expandFileInput(fileinput)
         end
-        if fileexpandpath == nil then
+
+        -- TODO: nested include is not allowed
+        local fileinclude = line:match("\\include{([^}]*)}")
+        if fileinclude ~= nil then
+            if includeonly ~= nil then
+                if includeonly:find(fileinclude .. ",") ~= nil then
+                    if fileinclude:find("%.") == nil then
+                        fileinclude = fileinclude .. ".tex"
+                    end
+                    expandFileInput(fileinclude)
+                else
+                    print("- " .. fileinclude .. " is not included")
+                end
+            end
+        end
+
+        if fileinput == nil and fileinclude == nil and newincludeonly == nil and isincludeonly == false then
             expandedinputfile:write(line .. "\n")
-        else
-            expandedinputfile:close()
-            expandingFile(fileexpandpath)
-            expandedinputfile = io.open(cachedir .. "/" .. expandedinputfilename .. ".tex", "a")
         end
     end
     expandedinputfile:close()
+    return 0
 end
 
 function expandFile(file)
-    -- Only process \include, \input
-    -- TODO: \includeonly selection
-    expandingFile(file)
+    -- Only process \include, \input, \includeonly
+    local inpreamble = true
+    local includeonly = nil
+    local isincludeonly = false
+    local errorlevel = expandingFile(file, inpreamble, includeonly, isincludeonly)
+    if errorlevel ~= 0 then
+        print("! expand " .. file .. " failed")
+        return errorlevel
+    end
     expandFrame(cachedir .. '/' .. expandedinputfilename .. ".tex")
+    return 0
 end
 
 function expandFrame(file)
@@ -129,7 +184,6 @@ function expandFrame(file)
 
     local expandedfile = io.open(cachedir .. "/" .. expandedfilename .. ".tex", "w")
     for line in io.lines(file) do
-        print(line)
         if line:sub(1, 1) ~= "%" then
             line = line:gsub("([^\\])%%.*", "%1")
             if inpreamble then
@@ -392,11 +446,14 @@ function typeset_demo_tasks()
         mkdir(cachedir)
     end
     
-    expandFile(maindir .. "/" .. mainfilename)
+    local errorlevel = expandFile(maindir .. "/" .. mainfilename)
+    if errorlevel ~= 0 then
+        return errorlevel
+    end
 
     splitFile(cachedir .. "/" .. expandedfilename .. ".tex")
 
-    local errorlevel = precompile(headerfilename)
+    errorlevel = precompile(headerfilename)
     if errorlevel == 2 then
         return 1
     end
