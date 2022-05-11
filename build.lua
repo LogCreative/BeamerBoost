@@ -28,7 +28,7 @@ secondpass       = true
 
 ------------------------------------------------------
 
-if draft then
+if draft or secondpass then
     totalframe   = false
 end
 
@@ -359,11 +359,12 @@ function precompile(file)
 
     if errorlevel ~= 0 then
         -- If dirty, recompile.
-        errorlevel = tex("\"\"\"" .. headerfilename .. ".tex\"\"\"", cachedir, etypesetcommand)
-        if errorlevel ~= 0 then
+        local errlv = tex("\"\"\"" .. headerfilename .. ".tex\"\"\"", cachedir, etypesetcommand)
+        if errlv ~= 0 then
             print("! precompile header failed")
             return 2
         end
+        return errorlevel
     else return errorlevel
     end
 end
@@ -484,15 +485,15 @@ function typeset_demo_tasks()
             for i=0, framenumber do
                 table.insert(dirty,i)  -- All restart since header is changed.
             end
+            print(' header changing causes a full restart.')
         end
-    else
-        errorlevel = renderFrames(dirty)
-        if errorlevel ~= 0 then
-            -- clean frames and pdfs
-            rm(cachedir, framefileprefix .. "*.tex")
-            rm(cachedir, framefileprefix .. "*.pdf")
-            return errorlevel
-        end
+    end
+    errorlevel = renderFrames(dirty)
+    if errorlevel ~= 0 then
+        -- clean frames and pdfs
+        rm(cachedir, framefileprefix .. "*.tex")
+        rm(cachedir, framefileprefix .. "*.pdf")
+        return errorlevel
     end
 
     local framerenderedtime = os.time()
