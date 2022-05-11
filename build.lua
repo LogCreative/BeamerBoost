@@ -474,20 +474,20 @@ function typeset_demo_tasks()
     local lessframelv = cleanExtraFrames()
 
     local dirty = dirtyFrames()
-    if #dirty == 0 then
-        if errorlevel == 0 then
-            print(" No dirty frames.")
-            if lessframelv == 0 then
-                print(" Nothing to do.")
-                return 0
-            end
-        else
-            for i=0, framenumber do
-                table.insert(dirty,i)  -- All restart since header is changed.
-            end
-            print(' header changing causes a full restart.')
+    if errorlevel ~= 0 then
+        dirty = {}
+        for i=0, framenumber do
+            table.insert(dirty,i)  -- All restart since header is changed.
+        end
+        print(' header changing causes a full restart.')
+    elseif #dirty == 0 then
+        print(" No dirty frames.")
+        if lessframelv == 0 then
+            print(" Nothing to do.")
+            return 0
         end
     end
+    
     errorlevel = renderFrames(dirty)
     if errorlevel ~= 0 then
         -- clean frames and pdfs
