@@ -62,7 +62,6 @@ M --> C[Clean Up]
 \end{CJK}
 \end{document}
 ```
-- 不支持任何跨帧的 `group` （`CJK` 除外）。
 - 需要工整的代码，也就是一行只有一个命令。
 - 太过复杂的代码可能无法解析，请保证代码能够用正常的编译方式正常通过。
 - 文档类中预置的 `\AtBeginPart`, `\AtBeginSection`, `\AtBeginSubsection`, `\AtBeginSubsubsection` 命令将会被全部清空，请显式地在主文件添加相关命令，并且不区分是否带星号的版本（可选参数无效），这类命令的最后一个大括号必须单独占一行。

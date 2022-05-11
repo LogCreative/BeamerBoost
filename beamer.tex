@@ -1,7 +1,7 @@
-\documentclass{ctexbeamer}
+\documentclass{beamer}
 \usetheme{split}
 % \setbeamertemplate{page number in head/foot}[totalframenumber] % remember to open total frame in build.lua
-
+\usepackage{CJKutf8}
 \AtBeginPart{
     \begin{frame}[plain]
         \partpage
@@ -12,9 +12,11 @@
         \tableofcontents[currentsection, currentsubsection]
     \end{frame}
 }
-\includeonly{contents/bar}
+\includeonly{contents/foo,contents/bar}
 \begin{document}
 %注释
+
+\begin{CJK}{UTF8}{song}
     \title{标题}
     \author{作者\%}
     \maketitle
@@ -22,5 +24,6 @@
     % 注释2
     \include{contents/foo}
     \include{contents/bar}
-    
+
+\end{CJK}
 \end{document}

@@ -49,11 +49,6 @@ mergefilename    = "merge"
 framenumber      = -1
 totalframenumber = 0
 
--- CJK related
-iscjk            = false
-cjkstart         = ""
-cjkend           = ""
-
 -- l3build clean files
 cleanfiles       = {
     expandedfilename .. ".tex",
@@ -77,6 +72,9 @@ cleanfiles       = {
 -- close the file before calling the next function
 -- then open it with 'a' mode
 expandedinputfile = nil
+
+-- Save the code between frames
+betweenframes = {}
 
 function expandingFile(file, inpreamble, includeonly, isincludeonly)
     if expandedinputfile == nil then
@@ -187,10 +185,7 @@ function expandFrame(file)
         if line:sub(1, 1) ~= "%" then
             line = line:gsub("([^\\])%%.*", "%1")
             if inpreamble then
-                if line:find("\\usepackage{CJK") then
-                    iscjk = true
-                    expandedfile:write(line .. "\n")
-                elseif line:find("\\begin{document}") then
+                if line:find("\\begin{document}") then
                     inpreamble = false
                     expandedfile:write(line .. "\n")
                 elseif isatbeginpart then
@@ -233,11 +228,7 @@ function expandFrame(file)
                     expandedfile:write(line .. "\n")
                 end
             else
-                if iscjk and line:find("\\begin{CJK") then
-                    cjkstart = line
-                elseif iscjk and line:find("\\end{CJK") then
-                    cjkend = line
-                elseif line:find("\\maketitle") ~= nil then
+                if line:find("\\maketitle") ~= nil then
                     expandedfile:write("\\begin{frame}\n\\titlepage\n\\end{frame}\n")
                 elseif line:find("\\part{") then
                     expandedfile:write(line .. "\n")
@@ -259,12 +250,23 @@ function expandFrame(file)
     end
     expandedfile:close()
 
-    -- Count the total framenumber.
-    -- TODO: remember the framepreamble and framepostamble
-    -- for future use
+    -- Count the total framenumber and save the preamble.
+    local inpreamble = true
+    local inframe = false
+
     for line in io.lines(cachedir .. "/" .. expandedfilename .. ".tex") do
-        if line:find("\\begin{frame}") ~= nil then
+        if inpreamble == false and line:find("\\begin{frame}") ~= nil then
+            inframe = true
             totalframenumber = totalframenumber + 1
+        elseif inpreamble == false and line:find("\\end{frame}") ~= nil then
+            inframe = false
+        elseif inpreamble and line:find("\\begin{document}") ~= nil then
+            inpreamble = false
+        else
+            lineenter = line .. "\n"
+            if inpreamble == false and inframe == false and lineenter ~= "\n" and lineenter:match("%s*\n") ~= nil then
+                table.insert(betweenframes,line)
+            end
         end
     end
 end
@@ -280,6 +282,7 @@ function splitFile(file)
         headerfile:write("\\PassOptionsToClass{draft}{beamer}\n")  -- for quick beamer previewing.
     end
     local framefile = nil
+    local betweenpast = 1
     local framepreamble = "" -- accumulated preamble
     for line in io.lines(file) do
         if inpreamble == false and line:find("\\begin{frame}") ~= nil then
@@ -288,9 +291,6 @@ function splitFile(file)
             framefile = io.open(cachedir .. "/" .. framefileprefix .. "." .. framenumber .. ".tex", "w")
             framefile:write("%&" .. headerfilename .. "\n")
             framefile:write("\\begin{document}\n")
-            if iscjk then
-                framefile:write(cjkstart .. "\n")
-            end
             framefile:write(framepreamble)
             framefile:write("\\setcounter{framenumber}{" .. framenumber .. "}\n")
             if totalframe then
@@ -304,10 +304,9 @@ function splitFile(file)
         elseif inpreamble == false and line:find("\\end{frame}") ~= nil then
             inframe = false
             framefile:write(line .. "\n")
-            if iscjk then
-                framefile:write(cjkend .. "\n")
+            for i=betweenpast,#betweenframes do
+                framefile:write(betweenframes[i] .. "\n")
             end
-            framefile:write("\\end{document}\n")
             framefile:close()
         elseif inpreamble and line:find("\\begin{document}") ~= nil then
             headerfile:write("\\AtBeginPart{}\n\\AtBeginSection{}\n\\AtBeginSubsection{}\n") -- Override the original automatic definitions on sectioning appending.
@@ -323,6 +322,7 @@ function splitFile(file)
                 line = line .. "\n"
                 if line ~= "\n" and line:match("%s*\n") ~= nil then
                     framepreamble = framepreamble .. line
+                    betweenpast = betweenpast + 1
                 end
             end
         end
@@ -498,7 +498,7 @@ function typeset_demo_tasks()
     local framerenderedtime = os.time()
     
     if #dirty > 0 or lessframelv ~= 0 then
-         errorlevel = mergeFrames()
+        errorlevel = mergeFrames()
         if errorlevel ~= 0 then
             return errorlevel
         end
